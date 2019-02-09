@@ -1,7 +1,5 @@
 "use script";
 
-const scripts = ["libs/objectdetect.js", "libs/objectdetect.handfist.js"];
-
 /*
  * Set up port and listener
  */
@@ -17,21 +15,11 @@ window.port.onMessage.addListener(function(msg) {
 /*
  * Functions
  */
-
 // init all functionality
 const init = () => {
-  injectScripts(scripts[0]); // inject object-detect base script
-  injectScripts(scripts[1]); // inject object-detect hand-fist model script
   injectCanvasMarkup();
   injectVideoMarkup();
   getMedia();
-};
-
-// inject computer vision scripts
-const injectScripts = path => {
-  const scriptEl = document.createElement("script");
-  scriptEl.src = chrome.extension.getURL(path);
-  document.head.appendChild(scriptEl);
 };
 
 // create and inject canvas on to page
@@ -75,7 +63,6 @@ const getMedia = () => {
   navigator.mediaDevices
     .getUserMedia(constraints)
     .then(stream => {
-      console.log(stream);
       videoEl.srcObject = stream;
       window.requestAnimationFrame(reqAnimLoop);
     })
@@ -102,7 +89,7 @@ const reqAnimLoop = () => {
     videoEl.readyState === videoEl.HAVE_ENOUGH_DATA &&
     videoEl.videoWidth > 0
   ) {
-    /* Prepare the detector once the video dimensions are known: */
+    /* Prepare the detector once the video dimensions are known */
     if (!detector) {
       const width = ~~((80 * videoEl.videoWidth) / videoEl.videoHeight);
       const height = 80;
@@ -125,24 +112,24 @@ const reqAnimLoop = () => {
       canvasEl.clientHeight
     );
 
-    var coords = detector.detect(videoEl, 1);
+    let coords = detector.detect(videoEl, 1);
     if (coords[0]) {
       let coord = coords[0];
 
-      /* Rescale coordinates from detector to video coordinate space: */
+      /* Rescale coordinates from detector to video coordinate space */
       coord[0] *= videoEl.videoWidth / detector.canvas.width;
       coord[1] *= videoEl.videoHeight / detector.canvas.height;
       coord[2] *= videoEl.videoWidth / detector.canvas.width;
       coord[3] *= videoEl.videoHeight / detector.canvas.height;
 
-      /* Find coordinates with maximum confidence: */
+      /* Find coordinates with maximum confidence */
       for (let i = coords.length - 1; i >= 0; --i) {
         if (coords[i][4] > coord[4]) {
           coord = coords[i];
         }
       }
 
-      /* Scroll window: */
+      /* Scroll window */
       const fist_pos = [coord[0] + coord[2] / 2, coord[1] + coord[3] / 2];
       if (fist_pos_old) {
         const dx = (fist_pos[0] - fist_pos_old[0]) / video.videoWidth;
@@ -152,7 +139,7 @@ const reqAnimLoop = () => {
         fist_pos_old = fist_pos;
       }
 
-      /* Draw coordinates on video overlay: */
+      /* Draw coordinates on video overlay */
       context.beginPath();
       context.lineWidth = "2";
       context.fillStyle = "rgba(0, 255, 255, 0.5)";
