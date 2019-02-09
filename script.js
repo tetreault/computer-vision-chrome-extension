@@ -1,22 +1,39 @@
-// set up a long-living channel via .connect()
-window.port = chrome.runtime.connect({
-  name: "toDont"
-});
+"use script";
 
-// Listener for messages coming thru port from background page
+/*
+ * Set up port and listener
+ */
+window.port = chrome.runtime.connect({ name: "port" });
+
 window.port.onMessage.addListener(function(msg) {
-  console.log(msg);
   if (msg.payload === "start") {
-    const scripts = ["libs/objectdetect.js", "libs/objectdetect.handfist.js"];
-
-    scripts.forEach(script => {
-      // tiny timeout, prevents handfist model from throwing error
-      // about objectdetect dependency
-      setTimeout(() => {
-        const scriptEl = document.createElement("script");
-        scriptEl.src = chrome.extension.getURL(script);
-        (document.head || document.documentElement).appendChild(scriptEl);
-      }, 50);
-    });
+    init();
   }
 });
+
+/*
+ * Functions
+ */
+// init all functionality
+const init = () => {
+  injectScripts();
+};
+
+// inject computer vision scripts
+const injectScripts = () => {
+  const scripts = ["libs/objectdetect.js", "libs/objectdetect.handfist.js"];
+
+  scripts.forEach(script => {
+    // timeout prevents handfist model from throwing error
+    // about objectdetect dependency after injection
+    setTimeout(() => {
+      const scriptEl = document.createElement("script");
+      scriptEl.src = chrome.extension.getURL(script);
+      (document.head || document.documentElement).appendChild(scriptEl);
+    }, 50);
+  });
+};
+
+const injectCameraMarkup = () => {
+  
+};
