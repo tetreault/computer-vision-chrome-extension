@@ -1,12 +1,11 @@
 "use script";
 
-/*
- * Set up port and listener
- */
+// set up port between background.js and script.js
 window.port = chrome.runtime.connect({ name: "port" });
 
+// add port listener
 window.port.onMessage.addListener(function(msg) {
-  // if background js sends "start" from browserAction.onClicked, init everything
+  // "start" from browserAction.onClicked in background.js
   if (msg.payload === "start") {
     init();
   }
@@ -58,7 +57,7 @@ const injectVideoMarkup = () => {
 // request access to the users webcam
 const getMedia = () => {
   const videoEl = document.getElementById("hands-free__video");
-  const constraints = { video: true };
+  const constraints = { audio: false, video: true };
 
   navigator.mediaDevices
     .getUserMedia(constraints)
@@ -89,21 +88,12 @@ const reqAnimLoop = () => {
     videoEl.readyState === videoEl.HAVE_ENOUGH_DATA &&
     videoEl.videoWidth > 0
   ) {
-    /* Prepare the detector once the video dimensions are known */
+    // prepare detector if it doesn't exist yet
     if (!detector) {
-      const width = ~~((80 * videoEl.videoWidth) / videoEl.videoHeight);
-      const height = 80;
-      detector = new objectdetect.detector(
-        width,
-        height,
-        1.1,
-        objectdetect.handfist
-      );
+      detector = initObjectDetect(videoEl);
     }
 
-    /* Draw video overlay: */
-    // canvasEl.width = ~~((100 * video.videoWidth) / video.videoHeight);
-    // canvasEl.height = 100;
+    // draw video frame on canvas
     context.drawImage(
       videoEl,
       0,
@@ -114,22 +104,11 @@ const reqAnimLoop = () => {
 
     let coords = detector.detect(videoEl, 1);
     if (coords[0]) {
-      let coord = coords[0];
+      let coord = rescaleAndSetMaxConfidence(coords[0], videoEl, detector);
 
-      /* Rescale coordinates from detector to video coordinate space */
-      coord[0] *= videoEl.videoWidth / detector.canvas.width;
-      coord[1] *= videoEl.videoHeight / detector.canvas.height;
-      coord[2] *= videoEl.videoWidth / detector.canvas.width;
-      coord[3] *= videoEl.videoHeight / detector.canvas.height;
+      drawObjectCoordinates(context, coord, videoEl, canvasEl);
 
-      /* Find coordinates with maximum confidence */
-      for (let i = coords.length - 1; i >= 0; --i) {
-        if (coords[i][4] > coord[4]) {
-          coord = coords[i];
-        }
-      }
-
-      /* Scroll window */
+      // Scroll window
       const fist_pos = [coord[0] + coord[2] / 2, coord[1] + coord[3] / 2];
       if (fist_pos_old) {
         const dx = (fist_pos[0] - fist_pos_old[0]) / video.videoWidth;
@@ -138,20 +117,46 @@ const reqAnimLoop = () => {
       } else {
         fist_pos_old = fist_pos;
       }
-
-      /* Draw coordinates on video overlay */
-      context.beginPath();
-      context.lineWidth = "2";
-      context.fillStyle = "rgba(0, 255, 255, 0.5)";
-      context.fillRect(
-        (coord[0] / videoEl.videoWidth) * canvasEl.clientWidth,
-        (coord[1] / videoEl.videoHeight) * canvasEl.clientHeight,
-        (coord[2] / videoEl.videoWidth) * canvasEl.clientWidth,
-        (coord[3] / videoEl.videoHeight) * canvasEl.clientHeight
-      );
-      context.stroke();
     } else {
       fist_pos_old = null;
     }
   }
+};
+
+// initialize object detect library
+const initObjectDetect = video => {
+  const width = ~~((80 * video.videoWidth) / video.videoHeight);
+  const height = 80;
+  return new objectdetect.detector(width, height, 1.1, objectdetect.handfist);
+};
+
+// rescale coordinates from detector to video coordinate space
+// and find coordinates with maximum confidence
+const rescaleAndSetMaxConfidence = (coord, video, detector) => {
+  coord[0] *= video.videoWidth / detector.canvas.width;
+  coord[1] *= video.videoHeight / detector.canvas.height;
+  coord[2] *= video.videoWidth / detector.canvas.width;
+  coord[3] *= video.videoHeight / detector.canvas.height;
+
+  for (let i = coord.length - 1; i >= 0; --i) {
+    if (coord[i][4] > coord[4]) {
+      coord = coord[i];
+    }
+  }
+
+  return coord;
+};
+
+// draw coordinates on video overlay
+const drawObjectCoordinates = (context, coord, video, canvas) => {
+  context.beginPath();
+  context.lineWidth = "2";
+  context.fillStyle = "rgba(0, 255, 255, 0.5)";
+  context.fillRect(
+    (coord[0] / video.videoWidth) * canvas.clientWidth,
+    (coord[1] / video.videoHeight) * canvas.clientHeight,
+    (coord[2] / video.videoWidth) * canvas.clientWidth,
+    (coord[3] / video.videoHeight) * canvas.clientHeight
+  );
+  context.stroke();
 };
