@@ -16,6 +16,9 @@ window.port.onMessage.addListener(function(msg) {
  */
 // init all functionality
 const init = () => {
+  window.fist_pos_old = undefined;
+  window.fist_pos = undefined;
+  window.detector = undefined;
   injectCanvasMarkup();
   injectVideoMarkup();
   getMedia();
@@ -75,8 +78,6 @@ const reqAnimLoop = () => {
   const videoEl = document.getElementById("hands-free__video");
   const canvasEl = document.getElementById("hands-free__canvas");
   const context = canvasEl.getContext("2d");
-  let fist_pos_old;
-  let detector;
 
   window.requestAnimationFrame(reqAnimLoop);
 
@@ -88,9 +89,9 @@ const reqAnimLoop = () => {
     videoEl.readyState === videoEl.HAVE_ENOUGH_DATA &&
     videoEl.videoWidth > 0
   ) {
-    // prepare detector if it doesn't exist yet
-    if (!detector) {
-      detector = initObjectDetect(videoEl);
+    // prepare window.detector if it doesn't exist yet
+    if (!window.detector) {
+      window.detector = initObjectDetect(videoEl);
     }
 
     // draw video frame on canvas
@@ -102,23 +103,30 @@ const reqAnimLoop = () => {
       canvasEl.clientHeight
     );
 
-    let coords = detector.detect(videoEl, 1);
+    let coords = window.detector.detect(videoEl, 1);
     if (coords[0]) {
-      let coord = rescaleAndSetMaxConfidence(coords[0], videoEl, detector);
+      let coord = rescaleAndSetMaxConfidence(
+        coords[0],
+        videoEl,
+        window.detector
+      );
 
       drawObjectCoordinates(context, coord, videoEl, canvasEl);
 
+      window.fist_pos = [coord[0] + coord[2] / 2, coord[1] + coord[3] / 2];
+
       // Scroll window
-      const fist_pos = [coord[0] + coord[2] / 2, coord[1] + coord[3] / 2];
-      if (fist_pos_old) {
-        const dx = (fist_pos[0] - fist_pos_old[0]) / video.videoWidth;
-        const dy = (fist_pos[1] - fist_pos_old[1]) / video.videoHeight;
+      if (window.window.fist_pos_old) {
+        const dx =
+          (window.fist_pos[0] - window.fist_pos_old[0]) / videoEl.videoWidth;
+        const dy =
+          (window.fist_pos[1] - window.fist_pos_old[1]) / videoEl.videoHeight;
         window.scrollBy(dx * 200, dy * 200);
       } else {
-        fist_pos_old = fist_pos;
+        window.fist_pos_old = window.fist_pos;
       }
     } else {
-      fist_pos_old = null;
+      window.fist_pos_old = null;
     }
   }
 };
@@ -130,7 +138,7 @@ const initObjectDetect = video => {
   return new objectdetect.detector(width, height, 1.1, objectdetect.handfist);
 };
 
-// rescale coordinates from detector to video coordinate space
+// rescale coordinates from window.detector to video coordinate space
 // and find coordinates with maximum confidence
 const rescaleAndSetMaxConfidence = (coord, video, detector) => {
   coord[0] *= video.videoWidth / detector.canvas.width;
