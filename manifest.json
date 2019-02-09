@@ -19,7 +19,11 @@
   "content_scripts": [
     {
       "matches": ["*://*/*"],
-      "js": ["script.js"],
+      "js": [
+        "libs/objectdetect.js",
+        "libs/objectdetect.handfist.js",
+        "script.js"
+      ],
       "run_at": "document_end"
     }
   ],
